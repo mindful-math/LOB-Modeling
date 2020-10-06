@@ -1,16 +1,17 @@
 import numpy as np
 import pandas as pd
 import math
+from statsmodels.formula.api import ols
 from statsmodels.tsa.stattools import coint
 import scipy.io as sio
 from pathlib import Path
 import matplotlib.pyplot as plt
 
 def init_asset(stock):
-    '''
+    """
     :param stock: matlab file of price info
     :return: time (t), change in time (dt), bid, bidvol, ask, askvol, market_orders, midprice, microprice, spread in a class
-    '''
+    """
     t = (np.array((stock['EventTime'][0][0][:, 0])) - 3600000 * 9.5) * 1e-3
     bid = np.array(stock['BuyPrice'][0][0] * 1e-4)
     bidvol = np.array(stock['BuyVolume'][0][0] * 1.0)
@@ -25,11 +26,11 @@ def init_asset(stock):
 
 
 def pairs_stats(s1, s2):
-    '''
+    """
     :param s1: asset 1 as a numpy array
     :param s2: asset 2 as a numpy array
     :return: correlation, stationarity (just summary stats), cointegration (p-value)
-    '''
+    """
     corr = np.corrcoef(s1, s2)
     cointegration = coint(s1, s2)
     #
@@ -61,4 +62,25 @@ def pairs_stats(s1, s2):
 amzn = init_asset(sio.loadmat(Path('Nov-2014/AMZN_20141103.mat').absolute())['LOB'])
 ebay = init_asset(sio.loadmat(Path('Nov-2014/EBAY_20141103.mat').absolute())['LOB'])
 pairs_stats(amzn['midprice'], ebay['midprice'])
+
+
+#
+# Intraday Market Activity 
+#
+def volume_pred(v_i, v_n, spy, vix, r, of):
+    """
+    :param v_i: lagged volume of shares
+    :param v_n: present volume want to predict
+    :param spy: SPY ETF intraday returns
+    :param vix: VIX intraday 'returns'
+    :param r: asset's intraday returns
+    :param of: day's net order flow
+    :return: regression for log(1+v_n) and basic stats for it
+    
+    Intuition: basic factors that may affect volume (market+endogenous), but typically, this leads to a poor prediction, adding HL-volatility demonstrates some interesting correlation with volume
+    """
+    df = pd.DataFrame({'v_i': v_i, 'spy': spy, 'vix': vix, 'r': r, 'of': of, 'v_n': v_n})
+    model = ols("v_n = v_i + spy + vix + r + of", df).fit()
+    print(model.summary())
+    return model._results.params
 
