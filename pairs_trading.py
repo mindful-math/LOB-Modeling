@@ -84,3 +84,22 @@ def volume_pred(v_i, v_n, spy, vix, r, of):
     print(model.summary())
     return model._results.params
 
+
+#
+# Volatility Measures
+#
+def vol(s, dv, t):
+    """
+    :param s: stock returns over some time t
+    :param dv: window size, realized dv-min volatility (i.e. 60 - realized vol/hr)
+    :param t: time period you want to look at - in minutes
+    :return: dictionary of volatility measures over t: realized vol, HL-vol, Bid/ask change, and ...
+    """
+    dt = (1440 - t) * 600
+    mu = (2 / np.pi) ** 2
+    s = s[0:s.size - dt]
+    r_vol = pd.DataFrame(s)[::10].rolling(dv).std(ddof=0)
+    bp_vol = pd.DataFrame(s)[::10].rolling(dv).apply(lambda x: mu * (x.abs() * x.shift(1).abs()).sum())
+    hl_vol = max(s) - min(s)
+    # need to add bid/ask count version
+    return {'realized': r_vol.dropna(how='all'), 'bipower': bp_vol.dropna(how='all'), 'hl_vol': hl_vol}
