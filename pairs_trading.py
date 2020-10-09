@@ -53,9 +53,9 @@ def pairs_stats(s1, s2):
     #
     # check spread
     #
-    diff = amzn['midprice'] - ebay['midprice']
-    plt.plot(amzn['t'], diff)
-    plt.title('AMZN - EBAY Spread')
+    diff = s1['midprice'] - s2['midprice']
+    plt.plot(s1['t'], diff)
+    plt.title('S1-S2 Spread')
     plt.ylabel('Midprice Diff')
     plt.axhline(diff.mean(), color='black')
     plt.show()
@@ -82,7 +82,7 @@ def volume_pred(v_i, v_n, spy, vix, r, of):
     
     Intuition: basic factors that may affect volume (market+endogenous), but typically, this leads to a poor prediction, adding HL-volatility demonstrates some interesting correlation with volume
     """
-    df = pd.DataFrame({'v_i': v_i, 'spy': spy, 'vix': vix, 'r': r, 'of': of, 'v_n': v_n})
+    df = pd.DataFrame({'v_i': np.log(v_i + 1), 'spy': spy, 'vix': vix, 'r': r, 'of': of, 'v_n': np.log(v_n + 1)})
     model = ols("v_n = v_i + spy + vix + r + of", df).fit()
     print(model.summary())
     return model._results.params
