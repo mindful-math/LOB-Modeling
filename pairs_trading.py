@@ -22,7 +22,7 @@ def init_asset(stock):
     midprice = 0.5 * (bid[:, 0] + ask[:, 0])
     microprice = (bid[:, 0] * askvol[:, 0] + ask[:, 0] * bidvol[:, 0]) / (bidvol[:, 0] + askvol[:, 0])
     spread = ask[:, 0] - bid[:, 0]
-    return {'time': t, 'bid': bid, 'bidvol': bidvol, 'ask': ask, 'askvol': askvol, 'market_order': market_order, 'dt': dt, 'midprice': midprice, 'microprice': microprice, 'spread': spread}
+    return {'t': t, 'bid': bid, 'bidvol': bidvol, 'ask': ask, 'askvol': askvol, 'market_order': market_order, 'dt': dt, 'midprice': midprice, 'microprice': microprice, 'spread': spread}
 
 
 def pairs_stats(s1, s2):
@@ -53,9 +53,12 @@ def pairs_stats(s1, s2):
     #
     # check spread
     #
-    dif = s1 - s2
-    dif.plot()
-    plt.axhline(dif.mean(), color = 'black')
+    diff = amzn['midprice'] - ebay['midprice']
+    plt.plot(amzn['t'], diff)
+    plt.title('AMZN - EBAY Spread')
+    plt.ylabel('Midprice Diff')
+    plt.axhline(diff.mean(), color='black')
+    plt.show()
     
 
 # example (amzn isn't stationary, two are cointegrated if choose p=.015, spread ~ normal)
