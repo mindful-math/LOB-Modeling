@@ -4,8 +4,7 @@ This semester, the repo will serve to compile a collection of fundamental market
 Notes:
 - Credit for the original model code goes to Alex Chinco of UIUC
 - I will be refactoring and testing modifications to the model like the results of this paper 
-https://web.stanford.edu/~milgrom/publishedarticles/Bid%20Ask%20and%20Transaction%20Prices.pdf
-
+https://www.cse.wustl.edu/~sanmay/papers/das-qf-rev3.pdf
 
 **pairs_trading.py**
 Notes: 
