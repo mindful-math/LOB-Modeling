@@ -4,6 +4,7 @@ import string
 import random
 import numpy as np
 from scipy import optimize as optim
+from scipy.signal import savgol_filter
 import matplotlib.pyplot as plt
 
 
@@ -13,8 +14,8 @@ class Glosten_And_Milgrom_1985:
     def __init__(self, N = 50, BETA = 0.50, KAPPA = 1.0, ALPHA = 0.10, SIGMA = 0.10, MAX_ITER = 1000, TOL = 0.01):
         """
         :param N: number of trades observed in time t
-        :param BETA:
-        :param KAPPA:
+        :param BETA: rate of informed & uninformed traders arriving/placing order
+        :param KAPPA: rate at which asset pays out at some time tau
         :param ALPHA:
         :param SIGMA:
         :param MAX_ITER:
@@ -37,11 +38,15 @@ class Glosten_And_Milgrom_1985:
         self.w    = np.zeros((self.N+1, 2))
         self.dwdp = np.zeros((self.N+1, 2))
 
-        for n in range(0, self.N+1):
-            self.w[n, 0] = (np.exp(2 * (1 - self.p[n])) - 1.0) / 10.0 ## High type value function
-            self.w[n, 1] = (np.exp(2 * self.p[n]) - 1.0) / 10.0       ## Low type value function
+        # seed guesses for array of value function levels
+        # first element in subarrays is the high-type function (W_H)
+        # second element in subarrays is the low-type function (W_L)
         self.w[0, 0] = (np.exp(2) - 1.0) / 10.0
         self.w[self.N, 1] = (np.exp(2) - 1.0) / 10.0
+        for n in range(0, self.N+1):
+            self.w[n, 0] = (np.exp(2 * (1 - self.p[n])) - 1.0) / 10.0
+            self.w[n, 1] = (np.exp(2 * self.p[n]) - 1.0) / 10.0
+
 
         i = 0
         self.err = []
@@ -54,86 +59,72 @@ class Glosten_And_Milgrom_1985:
             self.check_for_bluffing()
             self.update_w()
             self.compute_err()
-            i = i + 1
-            print([i, np.std(self.err[0:9])/np.mean(self.err[0:9])])
+            i += 1
+            print([i, np.std(self.err[0:9]) / np.mean(self.err[0:9])])
             self.plot_interim()
 
         self.plot_final()
 
 
     def smooth_values(self, x):
-
-        K = len(x)
-        for k in range(3,K-3):
-            x[k] = (x[k+3] + x[k+2] + x[k+1] + x[k] + x[k-1] + x[k-2] + x[k-3])/7
-        for k in range(K-3,3):
-            x[k] = (x[k+3] + x[k+2] + x[k+1] + x[k] + x[k-1] + x[k-2] + x[k-3])/7
-        x[1]   = x[1] + 0.20 * ((x[0] + x[1])/2 - x[1])
-        x[2]   = x[2] + 0.10 * ((x[0] + x[1] + x[2])/3 - x[2])
-        x[3]   = x[3] + 0.05 * ((x[0] + x[1] + x[2] + x[3])/4 - x[3])
-        x[K-2] = x[K-2] + 0.20 * ((x[K-1] + x[K-2])/2 - x[K-2])
-        x[K-3] = x[K-3] + 0.10 * ((x[K-1] + x[K-2] + x[K-3])/3 - x[K-3])
-        x[K-4] = x[K-4] + 0.05 * ((x[K-1] + x[K-2] + x[K-3] + x[K-4])/4 - x[K-4])
-        for k in range(2,K-2):
-            x[k] = (x[k+2] + x[k+1] + x[k] + x[k-1] + x[k-2])/5
-        for k in range(K-2,2):
-            x[k] = (x[k+2] + x[k+1] + x[k] + x[k-1] + x[k-2])/5
-        x[1]   = x[1] + 0.20 * ((x[0] + x[1])/2 - x[1])
-        x[2]   = x[2] + 0.10 * ((x[0] + x[1] + x[2])/3 - x[2])
-        x[3]   = x[3] + 0.05 * ((x[0] + x[1] + x[2] + x[3])/4 - x[3])
-        x[K-2] = x[K-2] + 0.20 * ((x[K-1] + x[K-2])/2 - x[K-2])
-        x[K-3] = x[K-3] + 0.10 * ((x[K-1] + x[K-2] + x[K-3])/3 - x[K-3])
-        x[K-4] = x[K-4] + 0.05 * ((x[K-1] + x[K-2] + x[K-3] + x[K-4])/4 - x[K-4])
-        for k in range(1,K-1):
-            x[k] = (x[k+1] + x[k] + x[k-1])/3
-        for k in range(K-1,1):
-            x[k] = (x[k+1] + x[k] + x[k-1])/3
+        """
+        :param x:
+        :return: filter-applied dataset for smoothness
+        """
+        xhat = savgol_filter(x, 51, 3)
         return x
 
 
     def num_deriv(self):
-
+        """
+        :return: numerically solves for the high and low-value function derivatives at each point p_i.,
+        boundary derivs are manually inputted*
+        """
+        self.dwdp[0, 0] = (self.w[1, 0] - self.w[0, 0]) / (self.p[1] - self.p[0])
+        self.dwdp[0, 1] = 0
+        self.dwdp[self.N, 0] = 0
+        self.dwdp[self.N, 1] = (self.w[self.N, 1] - self.w[self.N - 1, 1]) / (self.p[self.N] - self.p[self.N - 1])
         for n in range(1, self.N):
-            self.dwdp[n,0] = 0.5 * ( (self.w[n+1,0] - self.w[n,0])/(self.p[n+1] - self.p[n]) + (self.w[n,0] - self.w[n-1,0])/(self.p[n] - self.p[n-1]) )
-            self.dwdp[n,1] = 0.5 * ( (self.w[n+1,1] - self.w[n,1])/(self.p[n+1] - self.p[n]) + (self.w[n,1] - self.w[n-1,1])/(self.p[n] - self.p[n-1]) )
-        self.dwdp[0,0]      = (self.w[1,0] - self.w[0,0])/(self.p[1] - self.p[0])
-        self.dwdp[self.N,0] = 0
-        self.dwdp[0,1]      = 0
-        self.dwdp[self.N,1] = (self.w[self.N,1] - self.w[self.N-1,1])/(self.p[self.N] - self.p[self.N-1])
+            self.dwdp[n,0] = 0.5 * ((self.w[n+1,0] - self.w[n,0]) / (self.p[n+1] - self.p[n]) + (self.w[n,0] - self.w[n-1,0]) / (self.p[n] - self.p[n-1]))
+            self.dwdp[n,1] = 0.5 * ((self.w[n+1,1] - self.w[n,1]) / (self.p[n+1] - self.p[n]) + (self.w[n,1] - self.w[n-1,1]) / (self.p[n] - self.p[n-1]))
 
 
     def interpolate(self, x):
-
+        """
+        :param x:
+        :return:
+        """
         nearest_p_found = False
         n = 0
         while ((nearest_p_found == False) and (self.N > n)):
             if (x <= self.p[n+1]):
                 nearest_p_found = True
             else:
-                n = n + 1
+                n += 1
         if (n == self.N):
-            w_at_x = self.w[self.N,:]
+            w_at_x = self.w[self.N, :]
         else:
-            w_at_x = [self.w[n,0] * ((x - self.p[n]) / (self.p[n+1] - self.p[n])) + self.w[n + 1,0] * ((self.p[n+1] - x) / (self.p[n+1] - self.p[n])),
-                      self.w[n,1] * ((x - self.p[n]) / (self.p[n+1] - self.p[n])) + self.w[n + 1,1] * ((self.p[n+1] - x) / (self.p[n+1] - self.p[n]))]
+            w_at_x = [self.w[n,0] * ((x - self.p[n]) / (self.p[n+1] - self.p[n])) + self.w[n + 1, 0] * ((self.p[n+1] - x) / (self.p[n+1] - self.p[n])),
+                      self.w[n,1] * ((x - self.p[n]) / (self.p[n+1] - self.p[n])) + self.w[n + 1, 1] * ((self.p[n+1] - x) / (self.p[n+1] - self.p[n]))]
         return w_at_x
 
 
     def compute_bid(self):
-
-        tol              = 0.0001
+        """
+        :return:
+        """
         self.bid[0]      = 0
         self.bid[self.N] = 1
         for n in range(1, self.N):
             err_sq = 1
             i = 0
-            b = self.p[n]/2
-            while ((err_sq > tol) and (i < 10000)):
-                err    = self.w[n,1] - (b - self.interpolate(b)[1])
+            b = self.p[n] / 2
+            while ((err_sq > self.TOL) and (i < self.MAX_ITER)):
+                err    = self.w[n, 1] - (b - self.interpolate(b)[1])
                 b      = b + err / 1000
-                err_sq = err * err
-                i      = i + 1
-            if ((i < 10000) and (b > 0)):
+                err_sq = err ** 2
+                i      += 1
+            if ((i < self.MAX_ITER) and (b > 0)):
                 self.bid[n] = b
             else:
                 self.bid[n] = 0.00001
@@ -142,19 +133,18 @@ class Glosten_And_Milgrom_1985:
 
     def compute_ask(self):
 
-        tol              = 0.0001
         self.ask[0]      = 0
         self.ask[self.N] = 1
         for n in range(1, self.N):
             err_sq = 1
             i = 0
             a = (1 - self.p[n])/2
-            while ((err_sq > tol) and (i < 10000)):
+            while ((err_sq > self.TOL) and (i < self.MAX_ITER)):
                 err    = self.w[n,0] - ((1 - a) - self.interpolate(a)[0])
                 a      = a - err / 1000
-                err_sq = err * err
+                err_sq = err ** 2
                 i      = i + 1
-            if ((i < 10000) and (a < 1)):
+            if ((i < self.MAX_ITER) and (a < 1)):
                 self.ask[n] = a
             else:
                 self.ask[n] = 1 - 0.00001
