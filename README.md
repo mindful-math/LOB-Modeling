@@ -2,7 +2,7 @@ This semester, the repo will serve to compile a collection of fundamental market
 
 **glosten-milgrom-simple.py**
 This is the simplest version - given some order book at each time, it computes the expected bid and ask. 
-![image](https://drive.google.com/uc?export=view&id=1XlXuYmIEeU-Ovu6gCNIk61V7bNwU-Dl_)
+![ScreenShot](https://drive.google.com/uc?export=view&id=1XlXuYmIEeU-Ovu6gCNIk61V7bNwU-Dl_)
 
 **pairs_trading.py**
 Notes: 
