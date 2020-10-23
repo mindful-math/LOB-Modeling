@@ -1,6 +1,5 @@
 import numpy as np
 from math import e
-from numba import njit, prange
 
 def asset_or_nothing_call(s, n, k, T, K, F, SIGMA, r):
     """
@@ -19,11 +18,11 @@ def asset_or_nothing_call(s, n, k, T, K, F, SIGMA, r):
     BETA = e ** (- (r * T) / k)
     p = (1 + ((r * T) / k) - d) / (u - d)
     asset_option = np.zeros([n + 1, n + 1])
-    for moves in prange(n + 1):
-        for downfactors in prange(moves + 1):
+    for moves in range(n + 1):
+        for downfactors in range(moves + 1):
             asset_option[downfactors, moves] = s * (u ** (moves - downfactors)) * (d ** downfactors)
-    for moves in prange(n - 1, -1, -1):
-        for downfactors in prange(0, moves + 1):
+    for moves in range(n - 1, -1, -1):
+        for downfactors in range(0, moves + 1):
             if asset_option[downfactors, moves] - K <= 0:
                 asset_option[downfactors, moves] = (BETA * ((p * asset_option[downfactors, moves + 1]) + ((1 - p) * asset_option[downfactors + 1, moves + 1])))
             else:
