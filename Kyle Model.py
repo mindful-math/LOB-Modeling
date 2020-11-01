@@ -1,11 +1,10 @@
 import random
 import math
 import numpy as np
-from statistics import median
 
 class KyleModel:
 
-    def __init__(self, V_0 = 5, SIGMA_G = .4, SIGMA_T = .2, SIGMA = 2, ERR = 0.05, N = 50):
+    def __init__(self, V_0 = 5, SIGMA_G = 0.4, SIGMA_T = 0.2, SIGMA = 2, ERR = 0.05, N = 50):
         """
         one MM, one Informed, many Noise
         :param V_0: security value initially
@@ -19,8 +18,10 @@ class KyleModel:
         self.SIGMA_G = float(SIGMA_G)
         self.SIGMA_T = float(SIGMA_T)
         self.SIGMA   = float(SIGMA)
+        self.ERR     = float(ERR)
         self.N       = N
         self.one_period_price()
+        self.multiperiod_price()
 
 
     def one_period_price(self):
@@ -57,16 +58,22 @@ class KyleModel:
         DELTA = np.zeros(self.N+1)
         LAMBDA = np.zeros(self.N+1)
         SIGMA = np.zeros(self.N+1)
-        SIGMA[self.N] = self.SIGMA_V
+        BETA[self.N] = 0
+        DELTA[self.N] = 0
+        SIGMA[self.N] = self.SIGMA_G
+        LAMBDA[self.N] = math.sqrt(SIGMA[self.N]) / (self.SIGMA * math.sqrt(2 * dT))
         while (abs(SIGMA[0] - self.SIGMA_T) > self.ERR):
-            for n in range(N, 1, -1):
-                ALPHA[n] = (1 - (2 * BETA[n] * LAMBDA[n])) / (dT * ((2 * LAMBDA[n]) * (1 - (BETA[n] * LAMBDA[n]))))
+            for n in range(self.N, 1, -1):
+                ALPHA[n] = (LAMBDA[n] * (self.SIGMA ** 2)) / SIGMA[n]
                 SIGMA[n-1] = SIGMA[n] / (1 - (ALPHA[n] * LAMBDA[n] * dT))
-                BETA[n-1] = (1 - (BETA[n] * LAMBDA[n])) / (4 * LAMBDA[n])
+                BETA[n-1] = 1 / (4 * LAMBDA[n] * (1 - (BETA[n] * LAMBDA[n])))
                 lambda_roots = np.roots([((self.SIGMA ** 2) * BETA[n] * dT) / SIGMA[n], -((self.SIGMA ** 2) * dT) / SIGMA[n], -BETA[n], 0.5])
-                LAMBDA[n-1] = median(lambda_roots.real[abs(lambda_roots.imag) < 1e-5])
-
-            self.SIGMA[self.N] += 0.1
+                if len(lambda_roots) < 3:
+                    LAMBDA[n-1] = max(lambda_roots)
+                else:
+                    LAMBDA[n-1] = np.median(lambda_roots)
+                DELTA[n-1] = 1 / (4 * LAMBDA[n] * (1 - (BETA[n] * LAMBDA[n])))
+            SIGMA[self.N] += 0.1
 
         ALPHA[0] = (1 - (2 * BETA[0] * LAMBDA[0])) / (dT * ((2 * LAMBDA[0]) * (1 - (BETA[0] * LAMBDA[0]))))
         print(f'ALPHA: {ALPHA}')
