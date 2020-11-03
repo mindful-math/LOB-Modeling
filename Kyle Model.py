@@ -1,7 +1,11 @@
+import time
 import random
 import math
+import matplotlib
+import matplotlib.pyplot as plt
+matplotlib.use('TKAgg')
 import numpy as np
-
+from statistics import median
 class KyleModel:
 
     def __init__(self, V_0 = 5, SIGMA_G = 0.4, SIGMA_T = 0.2, SIGMA = 2, ERR = 0.05, N = 50):
@@ -62,18 +66,37 @@ class KyleModel:
         DELTA[self.N] = 0
         SIGMA[self.N] = self.SIGMA_G
         LAMBDA[self.N] = math.sqrt(SIGMA[self.N]) / (self.SIGMA * math.sqrt(2 * dT))
-        while (abs(SIGMA[0] - self.SIGMA_T) > self.ERR):
+
+        plt.ion()
+        fig = plt.figure()
+        plt.axis([0, 1000, 0, 1])
+        iter = 0
+        while (abs(SIGMA[1] - self.SIGMA_T) > self.ERR):
+
             for n in range(self.N, 1, -1):
+
                 ALPHA[n] = (LAMBDA[n] * (self.SIGMA ** 2)) / SIGMA[n]
                 SIGMA[n-1] = SIGMA[n] / (1 - (ALPHA[n] * LAMBDA[n] * dT))
                 BETA[n-1] = 1 / (4 * LAMBDA[n] * (1 - (BETA[n] * LAMBDA[n])))
                 lambda_roots = np.roots([((self.SIGMA ** 2) * BETA[n] * dT) / SIGMA[n], -((self.SIGMA ** 2) * dT) / SIGMA[n], -BETA[n], 0.5])
+
                 if len(lambda_roots) < 3:
                     LAMBDA[n-1] = max(lambda_roots)
+
                 else:
                     LAMBDA[n-1] = np.median(lambda_roots)
+
                 DELTA[n-1] = 1 / (4 * LAMBDA[n] * (1 - (BETA[n] * LAMBDA[n])))
-            SIGMA[self.N] += 0.1
+
+            print(SIGMA)
+            plt.scatter(iter, SIGMA[1] - self.SIGMA_T)
+            plt.title('Convergence of Intial Volatility of V (SIGMA[0])')
+            plt.xlabel('SIGMA[0] - True Initial Vol')
+            plt.ylabel('Iterations')
+            plt.show()
+            plt.pause(0.0001)
+            SIGMA[self.N] += .1
+            iter += 1
 
         ALPHA[0] = (1 - (2 * BETA[0] * LAMBDA[0])) / (dT * ((2 * LAMBDA[0]) * (1 - (BETA[0] * LAMBDA[0]))))
         print(f'ALPHA: {ALPHA}')
@@ -81,7 +104,7 @@ class KyleModel:
         print(f'SIGMA: {SIGMA}')
 
 
+
+
 if __name__ == "__main__":
     test = KyleModel()
-
-        
