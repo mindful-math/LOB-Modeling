@@ -6,7 +6,10 @@ This is the simplest version - given some order book at each time, it computes t
 
 **Kyle Model.py**
 This features the single period and multiperiod versions of the discretized Kyle model. It computes params for determining agents order flow at each time period as well as the informed trader expected profit (MM prices fairly). The model is very interesting, but actually implementing the model requires guessing SIGMA_N (future vol at end of trading) and recursively solving for initial vol and the other params. The original paper did not provide a way to get the convergence of SIGMA- True_Sigma at t=0, so here's a I guess toy version as I'm not sure best way to converge
-![ScreenShot](https://drive.google.com/uc?export=view&id=18bDhzD-WeTjGAnf3g5Vsxh_zhKEQoh4e)
+![ScreenShot](https://drive.google.com/uc?export=view&id=1BVKIPqujWb2vA3L-4r8hETevFOpv2omM)
+
+Here is a graph of the order sizes of the participants with V_0=5, SIGMA_T = 0.2, MAX_ITER = 100, SIGMA_noise = 2. We see after several demonstrations that order size of noise and informed are relatively inversely correlated.
+![ScreenShot](https://drive.google.com/uc?export=view&id=1Uriq0TB-LOCUhvgGEJJZJz8RLyUYmY5v)
 
 **pairs_trading.py**
 Notes: 
