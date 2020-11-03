@@ -3,6 +3,11 @@ This semester, the repo will serve to compile a collection of fundamental market
 **glosten-milgrom-simple.py**
 This is the simplest version - given some order book at each time, it computes the expected bid and ask. Here we can see the math & intuition blend nicely - spreads begin to converge after n trades as they gain more info on the "true" price
 ![ScreenShot](https://drive.google.com/uc?export=view&id=18s2g7-ETOgQ_dNAwFM2qGXg58gop8TzW)
+
+**Kyle Model.py**
+This features the single period and multiperiod versions of the discretized Kyle model. It computes params for determining agents order flow at each time period as well as the informed trader expected profit (MM prices fairly). The model is very interesting, but actually implementing the model requires guessing SIGMA_N (future vol at end of trading) and recursively solving for initial vol and the other params. The original paper did not provide a way to get the convergence of SIGMA- True_Sigma at t=0, so here's a I guess toy version as I'm not sure best way to converge
+![ScreenShot](https://drive.google.com/uc?export=view&id=18bDhzD-WeTjGAnf3g5Vsxh_zhKEQoh4e)
+
 **pairs_trading.py**
 Notes: 
 - more data to test can be found here - http://sebastian.statistics.utoronto.ca/books/algo-and-hf-trading/data/
