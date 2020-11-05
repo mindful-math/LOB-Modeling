@@ -8,10 +8,11 @@ from statistics import median
 
 class KyleModel:
 
-    def __init__(self, V_0 = 5, SIGMA_G = 0.4, SIGMA_T = 0.2, SIGMA = 2, ERR = 0.05, N = 50, MAX_ITER = 100):
+    def __init__(self, V_0 = 5, V_N = 5, SIGMA_G = 0.4, SIGMA_T = 0.2, SIGMA = 2, ERR = 0.05, N = 50, MAX_ITER = 100):
         """
         one MM, one Informed, many Noise
         :param V_0: security value initially
+        :param V_N: ending value of security (true)
         :param SIGMA_G: volatlity of security guess at time N
         :param SIGMA_T: true variance of security at time 0
         :param SIGMA: variance of net order flow of noise traders
@@ -66,7 +67,7 @@ class KyleModel:
         SIGMA = np.zeros(self.N+1)
         price_changes = np.zeros(self.N+1)
         informed_orders = np.zeros(self.N+1)
-        noise_orders = np.random.normal(0, self.SIGMA, self.N+1)
+        noise_orders = np.random.normal(0, (self.SIGMA ** 2) * (1 \ self.N), self.N+1)
         price_changes[0] = self.V_0
         informed_orders[0] = 0
         BETA[self.N] = 0
