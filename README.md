@@ -11,6 +11,10 @@ This features the single period and multiperiod versions of the discretized Kyle
 Here is a graph of the order sizes of the participants with V_0=5, SIGMA_T = 0.2, MAX_ITER = 100, SIGMA_noise = 2. We see after several demonstrations that order size of noise and informed are relatively inversely correlated.
 ![ScreenShot](https://drive.google.com/uc?export=view&id=1Uriq0TB-LOCUhvgGEJJZJz8RLyUYmY5v)
 
+**optimal_execution.py**
+This features a collection of models deviating from the seminal work of Almgren & Chriss in 2000. For now, it has optimal execution from the very basic version with linear impact costs as well as the one with stochastic optimal control & dynamic programming. Here is a graph of optimal execution from the stochastic approach with the following parameters: ALPHA = 1, ETA = 0.05, GAMMA = 0.5, BETA = 1, LAMBDA = 0.0003, SIGMA = 0.3, EPSILON = 0.0625, N = 50, T = 1, X = 100:
+![ScreenShot](https://drive.google.com/uc?export=view&id=1bO2KBGDsW7c738PQ4fOyMp7GFvv6fYqy)
+
 **pairs_trading.py**
 Notes: 
 - more data to test can be found here - http://sebastian.statistics.utoronto.ca/books/algo-and-hf-trading/data/
