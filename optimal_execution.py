@@ -1,17 +1,15 @@
 import numpy as np
 import pandas as pd
 import math
-import matplotlib as plt
+import matplotlib.pyplot as plt
 
 class Almgren_Chriss2000:
     """
     Description:
-    asdf
-    asdf
-    asdf
-
+    Version of model using stochastic control/HJB/DP to solve
+    for optimal execution **model relies on knowledge of MDP - E[e**gamma*X]** 
     """
-    def __init__(self, ALPHA = 1, ETA = 0.05, GAMMA = 0.5, BETA = 1, LAMBDA = 0.001, SIGMA = 0.3, EPSILON = 0.0625, N = 500, T = 1, X = 10000):
+    def __init__(self, ALPHA = 1, ETA = 0.05, GAMMA = 0.5, BETA = 1, LAMBDA = 0.001, SIGMA = 0.3, EPSILON = 0.0625, N = 50, T = 1, X = 100):
         """
         :param ALPHA: power of temporary impact function
         :param ETA: linear coefficient of temporary impact function
@@ -76,19 +74,18 @@ class Almgren_Chriss2000:
             inventory[step] = inventory[step - 1] - opt_moves[step, inventory[step - 1]]
             opt_sale.append(opt_moves[step - 1])
 
-        expected_shortfall = 0.5 * self.GAMMA * (self.X ** 2) + self.EPSILON * np.sum(opt_sale) + ((self.ETA - 0.5 * self.GAMMA) / self.TAU) * np.sum(opt_sale ** 2)
+        expected_shortfall = 0.5 * self.GAMMA * (self.X ** 2) + self.EPSILON * np.sum(opt_sale) + ((self.ETA - 0.5 * self.GAMMA) / self.TAU) * np.sum([sale ** 2 for sale in opt_sale])
         variance_shortfall = 0
         step = -1
         while step < len(opt_sale) - 1:
             step += 1
-            temp = (self.X - np.sum(N[0:step])) ** 2
+            temp = (self.X - np.sum(opt_sale[0:step])) ** 2
             variance_shortfall += temp
 
         variance_shortfall = self.TAU * (self.SIGMA ** 2) * variance_shortfall
 
         opt_sale = np.asarray(opt_sale)
         if plot=='True':
-            plt.figure(figsize=(7, 5))
             plt.plot(inventory, color='blue', lw=1.6)
             plt.xlabel('Trading Step')
             plt.ylabel('Number of Shares')
