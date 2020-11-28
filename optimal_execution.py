@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import math
 import matplotlib.pyplot as plt
+from scipy.optimize import minimize
 
 class Almgren_Chriss2000:
     """
@@ -9,7 +10,7 @@ class Almgren_Chriss2000:
     Select few deviations from the seminal model/work of Almgren & Chriss in their 2000 paper
     "Optimal Execution of Portfolio Transactions"
     """
-    def __init__(self, ALPHA = 1, ETA = 0.05, GAMMA = 0.5, BETA = 1, LAMBDA = 0.0003, SIGMA = 0.3, EPSILON = 0.0625, N = 50, T = 1, X = 100):
+    def __init__(self, ALPHA = 1, ETA = 5e-6, GAMMA = 5e-5, BETA = 1, LAMBDA = 0.0000081, SIGMA = 0.2, EPSILON = 0.0625, N = 50, T = 0.5, X = 500):
         """
         :param ALPHA: power of temporary impact function
         :param ETA: linear coefficient of temporary impact function
@@ -35,7 +36,7 @@ class Almgren_Chriss2000:
         self.KAPPA = math.sqrt((self.LAMBDA * (self.SIGMA ** 2)) /
                                 (self.ETA * (1 + ((0.5 * self.GAMMA * self.TAU) / self.ETA))))
         self.X = int(X)
-        self.bellman_solve()
+        #self.bellman_solve()
         self.basic_almgren()
 
     def temp_impact(self, x):
@@ -104,7 +105,7 @@ class Almgren_Chriss2000:
         opt_sale = np.asarray(opt_sale)
         if plot=='True':
             plt.plot(inventory, color='blue', lw=1.6)
-            plt.title('Optimal Execution')
+            plt.title('Optimal Execution - Dynamic Programming')
             plt.xlabel('Trading Step')
             plt.ylabel('Number of Shares')
             plt.grid(True)
@@ -117,23 +118,29 @@ class Almgren_Chriss2000:
         The baseline quadratic cost 2000 method for optimal execution from the paper - linear impact
         :return: opt_moves,
         """
+        def optimal_objective(sale):
+            """
+            verbatim quadratic functuon of the control params
+            :param sale: array
+            :return: objective func
+            """
+            expected_cost = 0.5 * self.GAMMA * (self.X ** 2) + self.EPSILON * np.sum(sale) + ((self.ETA - 0.5 * self.GAMMA) / self.TAU) * np.sum([order ** 2 for order in sale])
+            variance_cost = self.variance_IS(sale)
+            objective_cost = expected_cost + self.LAMBDA * variance_cost
+            return objective_cost
 
-        opt_sale = np.zeros(shape=(self.N, 1), dtype='int')
-        inventory = np.zeros(shape=(self.N, 1), dtype='int')
-        inventory[0] = self.X
-        inventory[self.N - 1] = 0
-        for n in range(1, self.N):
-            inventory[n] = ((np.sinh(self.KAPPA * (self.T - (n * self.TAU)))) / (np.sinh(self.KAPPA * self.T))) * self.X
-            opt_sale[n] = inventory[n-1] - inventory[n]
+        trades = np.zeros((self.N, 1))
+        BOUNDS = tuple((0.0, self.X) for x in range(len(trades)))
+        CONSTRAINTS = ({'type': 'eq', 'fun': lambda x: np.sum(x) - self.X})
+        opt_sale = minimize(optimal_objective, trades.flatten(), method='SLSQP', bounds=BOUNDS, constraints=CONSTRAINTS)
+        opt_sale = np.array(opt_sale.x)
+        inventory = [self.X]
+        for t in range((len(opt_sale))):
+            inventory.append(inventory[t] - opt_sale[t])
 
-        print(inventory)
-        ETA_TILDE = self.ETA - (0.5 * self.GAMMA * self.TAU)
-        expected_shortfall = 0.5 * self.GAMMA * (self.X ** 2) + self.EPSILON * np.sum(np.absolute(opt_sale)) +\
-                             (ETA_TILDE / self.TAU) * np.sum([sale ** 2 for sale in opt_sale])
-        variance_shortfall = self.variance_IS(opt_sale)
         if plot == 'True':
             plt.plot(inventory, color='blue', lw=1.6)
-            plt.title('Optimal Execution')
+            plt.title('Optimal Execution - Quadratic Programming')
             plt.xlabel('Trading Step')
             plt.ylabel('Number of Shares')
             plt.grid(True)
@@ -141,7 +148,6 @@ class Almgren_Chriss2000:
 
 if __name__ == "__main__":
     execute = Almgren_Chriss2000()
-
 
 
 
