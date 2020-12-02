@@ -10,7 +10,7 @@ class Almgren_Chriss2000:
     Select few deviations from the seminal model/work of Almgren & Chriss in their 2000 paper
     "Optimal Execution of Portfolio Transactions"
     """
-    def __init__(self, ALPHA = 1, ETA = 5e-6, GAMMA = 5e-5, BETA = 1, LAMBDA = 0.0000081, SIGMA = 0.2, EPSILON = 0.0625, N = 50, T = 0.5, X = 500):
+    def __init__(self, ALPHA = 1, ETA = 5e-6, GAMMA = 5e-5, BETA = 1, LAMBDA = 0.00009, SIGMA = 0.495, EPSILON = 0.0625, MU = 0, N = 50, T = 0.025, X = 500):
         """
         :param ALPHA: power of temporary impact function
         :param ETA: linear coefficient of temporary impact function
@@ -19,6 +19,7 @@ class Almgren_Chriss2000:
         :param LAMBDA: risk aversion measure**
         :param SIGMA: annual vol
         :param EPSILON: bid-ask spread + fees ~ fixed cost of selling ($/share)
+        :param MU: expected drift term, set to 0 if no drift is present
         :param N: number of time steps/buckets (integer)
         :param T: expiry - when holdings must be depleted (days)
         :param X: number of shares holding initially (integer)
@@ -30,6 +31,7 @@ class Almgren_Chriss2000:
         self.LAMBDA = float(LAMBDA)
         self.SIGMA = float(SIGMA)
         self.EPSILON = float(EPSILON)
+        self.MU = float(MU)
         self.N = int(N)
         self.T = float(T)
         self.TAU = math.sqrt(self.T / self.N)
@@ -124,7 +126,10 @@ class Almgren_Chriss2000:
             :param sale: array
             :return: objective func
             """
-            expected_cost = 0.5 * self.GAMMA * (self.X ** 2) + self.EPSILON * np.sum(sale) + ((self.ETA - 0.5 * self.GAMMA) / self.TAU) * np.sum([order ** 2 for order in sale])
+            expected_cost = 0.5 * self.GAMMA * (self.X ** 2) \
+                            - (self.MU * np.sum([self.TAU * (self.X - inventory) for inventory in np.cumsum(sale)])) \
+                            + self.EPSILON * np.sum([abs(order) for order in sale]) \
+                            + ((self.ETA - 0.5 * self.GAMMA) / self.TAU) * np.sum([order ** 2 for order in sale])
             variance_cost = self.variance_IS(sale)
             objective_cost = expected_cost + self.LAMBDA * variance_cost
             return objective_cost
@@ -138,6 +143,10 @@ class Almgren_Chriss2000:
         for t in range((len(opt_sale))):
             inventory.append(inventory[t] - opt_sale[t])
 
+        expected_shortfall = 0.5 * self.GAMMA * (self.X ** 2) + self.EPSILON * np.sum(opt_sale) + \
+                             ((self.ETA - 0.5 * self.GAMMA) / self.TAU) * np.sum([sale ** 2 for sale in opt_sale])
+        variance_shortfall = self.variance_IS(opt_sale)
+
         if plot == 'True':
             plt.plot(inventory, color='blue', lw=1.6)
             plt.title('Optimal Execution - Quadratic Programming')
@@ -145,6 +154,14 @@ class Almgren_Chriss2000:
             plt.ylabel('Number of Shares')
             plt.grid(True)
             plt.show()
+
+        return opt_sale, inventory, expected_shortfall, variance_shortfall
+
+    def reinforcement_learn(self):
+        """
+        WIP - I'm thinking making this more interesting based off Bao & Liu's recent paper on multi-agents
+        """
+        pass
 
 if __name__ == "__main__":
     execute = Almgren_Chriss2000()
