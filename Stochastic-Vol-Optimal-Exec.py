@@ -13,7 +13,7 @@ class Criscuolo2014:
     to minimize using simulated annealing, but I will try using sci-py as their
     method only worked fast/well for small N.
     """
-    def __init__(self, KAPPA = 3, THETA = 0.01, GAMMA = 0.1, RHO = 0.0, V_0 = 0.5, r = 0.05, T = 0.5, N = 8, S_0 = 100, ALPHA_INFINITY = 0.4, MU_1 = 0.4, MU_2 = 0.8, ALPHA = 1.5, BETA = 0.3, XI = 365):
+    def __init__(self, KAPPA = 3, THETA = 0.01, GAMMA = 0.1, RHO = 0.0, V_0 = 0.5, r = 0.05, T = 0.5, N = 4, S_0 = 100, ALPHA_INFINITY = 0.4, MU_1 = 0.4, MU_2 = 0.8, ALPHA = 1.5, BETA = 0.3, XI = 365):
         """
 
         :param KAPPA: exponential decay constant for volatility to mean-revert to THETA
@@ -48,12 +48,6 @@ class Criscuolo2014:
         self.BETA = float(BETA)
         self.XI = float(XI)
         self.VOL_RATIO = self.V_0 / math.sqrt(self.THETA)
-        '''
-        self.share_turnover = np.zeros((self.N, 1))
-        self.trade_schedule = np.zeros((self.N, 1))
-        self.turnover_dif = np.diff(share_turnover)
-        self.institute_trade_time = np.cumsum(self.turnover_dif / self.trade_schedule)
-        '''
         self.optimal_execution()
 
     def optimal_execution(self):
@@ -71,11 +65,13 @@ class Criscuolo2014:
             :param trades[i][1]: array dictacting participation rate for institution
             :return: Total Cost = Alpha Cost + Impact Cost
             """
-            trades = np.reshape(trades, (8, 2))
-            turnover_dif = np.diff([trade[0] for trade in trades])
-            inst_time = np.cumsum(turnover_dif / [trade[1] for trade in trades])
-            inst_time_diff = np.diff(inst_time)
-            alpha_cost = self.ALPHA_INFINITY * (1 / trades[self.N][0])\
+            trades = np.reshape(trades, (4, 2))
+            share_turnover = [trade[0] for trade in trades]
+            participation = [trade[1] for trade in trades]
+            turnover_dif = np.diff(share_turnover, prepend=share_turnover[0])
+            inst_time = np.cumsum(turnover_dif / participation)
+            inst_time_diff = np.diff(inst_time, prepend=inst_time[0])
+            alpha_cost = self.ALPHA_INFINITY * (1 / trades[self.N - 1][0])\
                          * np.sum([(trades[k][1] * self.MU_2)
                                    * (math.exp(-1 * (inst_time[k - 1]
                                                      / self.MU_2)) -
@@ -87,16 +83,16 @@ class Criscuolo2014:
                                          - math.exp(-1 * inst_time[k - 1]
                                                     * ((1 / self.MU_1)
                                                        + (1 / self.MU_2)))))
-                                   for k in range(1, len([trade[0] for trade in trades]))])
+                                   for k in range(0, len(share_turnover) - 1)])
             #
             # Compute Stochastic Volatility - deviant of Heston that is time dependent
             #
             F_func = [math.exp(-0.5 * (self.KAPPA * inst_time[k]))
                       * math.sqrt((self.VOL_RATIO ** 2) - 1 +
                                   math.exp(self.KAPPA * inst_time[k]))
-                      for k in range(1, len([trade[0] for trade in trades]))]
+                      for k in range(0, len(share_turnover) - 1)]
 
-            F_func_diff = np.diff(F_func)
+            F_func_diff = np.diff(F_func, prepend=F_func[0])
             stochastic_vol = [math.sqrt(self.THETA) + ((3 * self.GAMMA) /
                                                        (16 * self.KAPPA *
                                                         math.sqrt(self.THETA)))
@@ -112,27 +108,23 @@ class Criscuolo2014:
                                   - (((self.VOL_RATIO ** 4) * F_func_diff[k])
                                      / (F_func[k] * F_func[k - 1]
                                         * (((self.VOL_RATIO ** 2) - 1) ** 2)))))
-                              for k in range(1, len([trade[0] for trade in trades]))]
+                              for k in range(0, len(share_turnover) - 1)]
 
             impact_cost = (self.XI / (self.ALPHA - 1)) *\
                           np.sum([stochastic_vol[k] *
                                   (trades[k][1] ** self.BETA)
                                   * ((trades[k][0] ** (self.ALPHA - 1))
                                      - (trades[k - 1][0] ** (self.ALPHA - 1)))
-                                  for k in range(1, len([trade[0] for trade in trades]))])\
-                          + (((self.GAMMA * self.RHO) / (2 * trades[self.N][0]))
-                             * (self.KAPPA * trades[self.N][0]
-                                - np.sum([trade[0] for trade in trades][0: self.N - 1])))
+                                  for k in range(0, len(share_turnover) - 1)])\
+                          + (((self.GAMMA * self.RHO) / (2 * trades[self.N - 1][0]))
+                             * (self.KAPPA * trades[self.N - 1][0]
+                                - np.sum(share_turnover[0: self.N - 1])))
 
             total_cost = impact_cost + alpha_cost
             return total_cost
 
         optimal_trades = np.zeros((self.N, 2))
-        print(np.diff([optimal_trade[0] for optimal_trade in optimal_trades]))
-        #BOUNDS = tuple((0.0, 1.0) for x in range(len(optimal_trades)))
-        #CONSTRAINTS = ({'type': 'eq', 'fun': lambda x: np.sum(x) - self.X})
         opt_sale = minimize(total_cost, optimal_trades.flatten(), method='SLSQP')
-        opt_sale = np.array(opt_sale.x)
         print(opt_sale)
         return opt_sale
 
