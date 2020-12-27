@@ -1,4 +1,4 @@
-This semester, the repo will serve to compile a collection of fundamental market making models, as well as explorations of my own. 
+This semester/year, the repo will serve to compile a collection of fundamental market making models, as well as explorations of my own. I apologize for the docs and structure of this - I just wanted to make functional & readable model code available for people to use - most of the original papers do not include code and this helps for reproducability/verifying results. 
 
 **glosten-milgrom-simple.py**
 This is the simplest version - given some order book at each time, it computes the expected bid and ask. Here we can see the math & intuition blend nicely - spreads begin to converge after n trades as they gain more info on the "true" price
@@ -14,6 +14,9 @@ Here is a graph of the order sizes of the participants with V_0=5, SIGMA_T = 0.2
 **optimal_execution.py**
 This features a collection of models deviating from the seminal work of Almgren & Chriss in 2000. For now, it has optimal execution from the very basic version with linear impact costs as well as the one with stochastic optimal control & dynamic programming. Here is a graph of optimal execution from the stochastic approach with the following parameters: ALPHA = 1, ETA = 0.05, GAMMA = 0.5, BETA = 1, LAMBDA = 0.0003, SIGMA = 0.3, EPSILON = 0.0625, N = 50, T = 1, X = 100:
 ![ScreenShot](https://drive.google.com/uc?export=view&id=1bO2KBGDsW7c738PQ4fOyMp7GFvv6fYqy)
+
+**Stochastic-Vol-Optimal-Exec.py**
+This attempts to replicate the results of Criscuolo & Waehlbroek (2014) when uncovering the effects of stochastic volatility (a deviant of the Heston with temporal averaging) on participation rate schedules for institutions. The code is buggy/doesn't work at the moment - the minimization looks atrocious - the paper simplifies results for only n=4 - not enough/realistic as trades can happen much more frequently. Additionally they use some "patented/private" simulated annealing software that supposedly makes this code work - I don't want to point fingers, but the result isn't practical even if it is solvable using some fancy numerical technique because of runtime issues. 
 
 **pairs_trading.py**
 Notes: 
