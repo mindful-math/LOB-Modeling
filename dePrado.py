@@ -4,6 +4,9 @@ import pandas as pd
 import yfinance as yf
 from scipy import stats
 import scipy.io as sio
+from sklearn.metrics import mean_squared_error
+from statsmodels.tsa.ar_model import AutoReg, AutoRegResults
+from random import random
 from pathlib import Path
 import matplotlib.pyplot as plt
 from matplotlib import cm
@@ -15,7 +18,7 @@ class dePrado2014:
     Description: This is a collection of programs/code relatd
     to the work of de Prado et al 2012 - "Optimal Execution Horizon"
     """
-    def __init__(self, S_0 = 10, MU = 0.7, EPSILON = 0.3, ALPHA = 0.5, S_low = 5, S_high = 100, DELTA = 0.3, lob_path = 'Nov-2014/AMZN_20141103.mat'):
+    def __init__(self, S_0 = 10, MU = 0.7, EPSILON = 0.3, ALPHA = 0.5, S_low = 5, S_high = 100, DELTA = 0.3, lob_path = 'Nov-2014/AMZN_20141103.mat', plot = False, window = 5):
         """
         :param S_0: initial price of stock
         :param MU: rate of informed trades
@@ -25,6 +28,7 @@ class dePrado2014:
         :param S_high: price of event after good news
         :param DELTA: probability of bad news
         :param lob_path: there are 3/4 sample mat files in the repo
+        :param plot: true -> plot microstructure stuff
         """
         self.S_0 = float(S_0)
         self.MU = float(MU)
@@ -35,7 +39,12 @@ class dePrado2014:
         self.DELTA = float(DELTA)
         self.lob_raw = sio.loadmat(Path(lob_path).absolute())['LOB']
         self.lob_data = self.get_lob_data(self.lob_raw)
-        self.data_vis()
+        self.plot = plot
+        if self.plot == True:
+            self.data_vis()
+
+        #self.AR_order_imbalance()
+
 
     def get_yfinance_data(self, ticker, period, interval):
         """
@@ -51,12 +60,15 @@ class dePrado2014:
         :param stock: path to matlab file of price info
         :return: time (t), change in time (dt), bid, bidvol, ask, askvol, market_orders, midprice, microprice, spread in a class
         """
-        t = (np.array((stock['EventTime'][0][0][:, 0])) - 3600000 * 9.5) * 1e-3
+        t = (np.array((stock['EventTime'][0][0][:, 0])) - 34200000) * 1e-3
         bid = np.array(stock['BuyPrice'][0][0] * 1e-4)
         bidvol = np.array(stock['BuyVolume'][0][0] * 1.0)
         ask = np.array(stock['SellPrice'][0][0] * 1e-4)
         askvol = np.array(stock['SellVolume'][0][0] * 1.0)
         market_order = np.array(stock['MO'][0][0] * 1.0)
+        print(t[0])
+        market_order[:, 1] = (np.array((market_order[:, 1])) - 34200000) * 1e-3
+        print(market_order[:, 0][0])
         dt = t[1] - t[0]
         midprice = 0.5 * (bid[:, 0] + ask[:, 0])
         microprice = (bid[:, 0] * askvol[:, 0] + ask[:, 0] * bidvol[:, 0]) / (
@@ -88,8 +100,8 @@ class dePrado2014:
         for i in range(5):
             axs[0, 1].fill_between(np.arange(0, int(self.lob_data['t'][-1]), 1), spread[:, i], spread[:, -(i + 1)], color=colormap(i / 5))
 
-        buy_orders = self.lob_data['market_order'][:, 7].clip(0,1)
-        sell_orders = self.lob_data['market_order'][:, 7].clip(-1, 0)
+        buy_orders = self.lob_data['market_order'][:, 7].clip(-1,0)
+        sell_orders = self.lob_data['market_order'][:, 7].clip(0, 1)
         axs[1, 1].set_title('Cumulative Buy & Sell MOs')
         axs[1, 1].plot(np.arange(len(buy_orders)), np.cumsum(buy_orders), color='g')
         axs[1, 1].plot(np.arange(len(sell_orders)), np.cumsum(sell_orders))
@@ -113,9 +125,37 @@ class dePrado2014:
                        (math.factorial(X) * math.factorial(Y))
         prob = prob_good_news + prob_bad_news + prob_no_news
         return prob
+    
+    # WIP - why RMSE=0 still figure out...:(
+    def AR_order_imbalance(self):
+        # autoregresses order imbalance
+        print(self.lob_data['t'][::600][1])
+        train = self.lob_data['bidvol'][0:int(len(self.lob_data['bidvol'][:, 0]) / 3), 0]
+        test = self.lob_data['bidvol'][int(len(self.lob_data['bidvol'][:, 0]) / 3):len(self.lob_data['bidvol'][:, 0]) - 1, 0]
+        model = AutoReg(train, lags = 5).fit()
+        coef = model.params
 
+        def predict(params, history):
+            Y = params[0]
+            for i in range(1, len(params)):
+                Y += params[i] * history[-i]
+            return Y
 
+        history = [train[i] for i in range(len(train))]
+        pred = []
+        for t in range(len(test)):
+            Y = predict(coef, history)
+            observ = test[t]
+            pred.append(observ)
+            history.append(observ)
 
+        rmse = math.sqrt(mean_squared_error(test, pred))
+        print(f'RMSE: {rmse}')
+        plt.plot(test)
+        plt.plot(pred, color='blue')
+        plt.show()
+        
+    # WIP
     def bulk_volume_classification(self, data):
         price = data[0]
         bulk = [0, 0]
