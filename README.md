@@ -19,5 +19,6 @@ This features a collection of models deviating from the seminal work of Almgren 
 This attempts to replicate the results of Criscuolo & Waehlbroek (2014) when uncovering the effects of stochastic volatility (a deviant of the Heston with temporal averaging) on participation rate schedules for institutions. The code is buggy/doesn't work at the moment - the minimization looks atrocious - the paper simplifies results for only n=4 - not enough/realistic as trades can happen much more frequently. Additionally they use some "patented/private" simulated annealing software that supposedly makes this code work - I don't want to point fingers, but the result isn't practical even if it is solvable using some fancy numerical technique because of runtime issues. 
 
 **dePrado.py**
-Features models, calculations, and data feed for exploring/verifying results of Easley, de Prado, O'Hara (2012)
+Features models, calculations, and data feed for exploring/verifying results of Easley, de Prado, O'Hara (2012). I also wanted to include basic microstructure details, data that is cleaned, graphs, etc.
+![ScreenShot](https://drive.google.com/uc?export=view&id=1Nbj__JszYP94MPA8lPjzhQznQtOi2ZPp)
 
