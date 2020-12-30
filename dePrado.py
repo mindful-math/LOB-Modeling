@@ -42,8 +42,7 @@ class dePrado2014:
         self.plot = plot
         if self.plot == True:
             self.data_vis()
-
-        #self.AR_order_imbalance()
+        self.AR_order_imbalance(plot_regress=False)
 
 
     def get_yfinance_data(self, ticker, period, interval):
@@ -61,14 +60,13 @@ class dePrado2014:
         :return: time (t), change in time (dt), bid, bidvol, ask, askvol, market_orders, midprice, microprice, spread in a class
         """
         t = (np.array((stock['EventTime'][0][0][:, 0])) - 34200000) * 1e-3
+        minute_incremented_t = t[::600]
+        hour_incremented_t = t[::36000]
         bid = np.array(stock['BuyPrice'][0][0] * 1e-4)
         bidvol = np.array(stock['BuyVolume'][0][0] * 1.0)
         ask = np.array(stock['SellPrice'][0][0] * 1e-4)
         askvol = np.array(stock['SellVolume'][0][0] * 1.0)
         market_order = np.array(stock['MO'][0][0] * 1.0)
-        print(t[0])
-        market_order[:, 1] = (np.array((market_order[:, 1])) - 34200000) * 1e-3
-        print(market_order[:, 0][0])
         dt = t[1] - t[0]
         midprice = 0.5 * (bid[:, 0] + ask[:, 0])
         microprice = (bid[:, 0] * askvol[:, 0] + ask[:, 0] * bidvol[:, 0]) / (
@@ -125,11 +123,21 @@ class dePrado2014:
                        (math.factorial(X) * math.factorial(Y))
         prob = prob_good_news + prob_bad_news + prob_no_news
         return prob
-    
-    # WIP - why RMSE=0 still figure out...:(
-    def AR_order_imbalance(self):
-        # autoregresses order imbalance
-        print(self.lob_data['t'][::600][1])
+
+    def AR_order_imbalance(self, plot_regress):
+        # autoregresses market order buy volume
+        MO_buy_vol = np.array((self.lob_data['market_order'][:, 0] / 3.6e6, self.lob_data['market_order'][:, 6], self.lob_data['market_order'][:, 7])).T
+        MO_buy_vol[:, 1] = np.where(MO_buy_vol[:, 2] < 0, 0, MO_buy_vol[:, 1])
+        MO_buy_vol = MO_buy_vol[:, 0:2]
+        MO_sell_vol = np.array((self.lob_data['market_order'][:, 0] / 3.6e6, self.lob_data['market_order'][:, 6], self.lob_data['market_order'][:, 7])).T
+        MO_sell_vol[:, 1] = np.where(MO_sell_vol[:, 2] > 0, 0, MO_sell_vol[:, 1])
+        MO_sell_vol = MO_sell_vol[:, 0:2]
+        plt.title('Market Order Buy Volumes Against Time')
+        plt.xlabel('Time Since Midnight (Hours)')
+        plt.ylabel('Volume')
+        plt.scatter(MO_buy_vol[:, 0], MO_buy_vol[:, 1], c=np.random.rand(len(MO_buy_vol)))
+        plt.show()
+        # Regressing Bid Volume - might change this to something more autocorrelated
         train = self.lob_data['bidvol'][0:int(len(self.lob_data['bidvol'][:, 0]) / 3), 0]
         test = self.lob_data['bidvol'][int(len(self.lob_data['bidvol'][:, 0]) / 3):len(self.lob_data['bidvol'][:, 0]) - 1, 0]
         model = AutoReg(train, lags = 5).fit()
@@ -151,11 +159,11 @@ class dePrado2014:
 
         rmse = math.sqrt(mean_squared_error(test, pred))
         print(f'RMSE: {rmse}')
-        plt.plot(test)
-        plt.plot(pred, color='blue')
-        plt.show()
+        if plot_regress == True:
+            plt.plot(test)
+            plt.plot(pred, color='blue')
+            plt.show()
         
-    # WIP
     def bulk_volume_classification(self, data):
         price = data[0]
         bulk = [0, 0]
@@ -168,8 +176,6 @@ class dePrado2014:
             bulk[0] += min(data[1]  * (1 - z), data[1] - data[2])
             bulk[1] += data[1]
             price = data[0]
-
-
 
 if __name__=="__main__":
     dePrado2014()
