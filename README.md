@@ -1,5 +1,7 @@
 This semester/year, the repo will serve to compile a collection of fundamental market making models, as well as explorations of my own. I apologize for the docs and structure of this - I just wanted to make functional & readable model code available for people to use - most of the original papers do not include code and this helps for reproducability/verifying results. 
 
+Data to play with can be found in the example data - matlab files of LOB data for AMZN and EBAY or, in the trades directory/folder as csv files - this is just the sample ITCH data from Tick Data (https://www.tickdata.com/). 
+
 **glosten-milgrom-simple.py**
 This is the simplest version - given some order book at each time, it computes the expected bid and ask. Here we can see the math & intuition blend nicely - spreads begin to converge after n trades as they gain more info on the "true" price
 ![ScreenShot](https://drive.google.com/uc?export=view&id=18s2g7-ETOgQ_dNAwFM2qGXg58gop8TzW)
