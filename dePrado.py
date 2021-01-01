@@ -18,7 +18,7 @@ class dePrado2014:
     Description: This is a collection of programs/code relatd
     to the work of de Prado et al 2012 - "Optimal Execution Horizon"
     """
-    def __init__(self, S_0 = 10, MU = 0.7, EPSILON = 0.3, ALPHA = 0.5, S_low = 5, S_high = 100, DELTA = 0.3, lob_path = 'Nov-2014/AMZN_20141103.mat', tick_data_path = 'SampleEquityData_US/Trades/14081.csv', plot = False, window = 5):
+    def __init__(self, S_0 = 10, MU = 0.7, EPSILON = 0.3, ALPHA = 0.5, S_low = 5, S_high = 100, DELTA = 0.3, lob_path = 'Nov-2014/AMZN_20141103.mat', tick_data_path = 'SampleEquityData_US/Trades/14081.csv', plot = False, n = 500):
         """
         :param S_0: initial price of stock
         :param MU: rate of informed trades
@@ -29,6 +29,7 @@ class dePrado2014:
         :param DELTA: probability of bad news
         :param lob_path: there are 3/4 sample mat files in the repo
         :param plot: true -> plot microstructure stuff
+        :param n: number of volume blocks for BVC and VPIN calculations
         """
         self.S_0 = float(S_0)
         self.MU = float(MU)
@@ -37,6 +38,7 @@ class dePrado2014:
         self.S_low = float(S_low)
         self.S_high = float(S_high)
         self.DELTA = float(DELTA)
+        self.n = int(n)
         self.lobster_raw = sio.loadmat(Path(lob_path).absolute())['LOB']
         self.lobster_data = self.get_lobster_data(self.lobster_raw)
         self.tick_data_raw = pd.read_csv(Path(tick_data_path).absolute())
@@ -45,7 +47,8 @@ class dePrado2014:
         if self.plot == True:
             self.data_vis()
         self.AR_order_imbalance(plot_regress=False)
-        self.bulk_volume_classification(500)
+        buy_buckets, sell_buckets = self.bvc()
+        self.VPIN(buy_buckets, sell_buckets)
 
     def get_yfinance_data(self, ticker, period, interval):
         """
@@ -195,18 +198,18 @@ class dePrado2014:
         df.columns = ['Time', 'Price', 'Volume']
         return df
 
-    def bulk_volume_classification(self, n):
+    def bvc(self):
         """
-        :param n: n is the number of volume buckets you want
-        :return: volume buckets of LOB data and VPIN
+        :return: volume buckets of LOB data (bulk volume classification)
         """
         total_volume = self.tick_data['Volume'].sum()
-        volume_bucket_size = total_volume / n
+        volume_bucket_size = total_volume / self.n
         price_change = np.diff(self.tick_data['Price'], prepend=self.tick_data['Price'][0])
         price_deviation = np.std(price_change)
         buy_volume_buckets = []
         sell_volume_buckets = []
         total_volume = []
+        price_changes = []
         v_i = []
         P_i = []
         VPIN = []
@@ -217,7 +220,8 @@ class dePrado2014:
                 continue
 
             else:
-                price_change = abs(max(P_i) - min(P_i))
+                price_change = P_i[-1] - P_i[0]
+                price_changes.append(price_change)
                 buy_volume = sum(v_i[0:-1]) * stats.norm.cdf(price_change / price_deviation)
                 sell_volume = sum(v_i[0:-1]) - buy_volume
                 total_volume.append(sum(v_i[0:-1]))
@@ -225,18 +229,25 @@ class dePrado2014:
                 sell_volume_buckets.append(sell_volume)
                 v_i = [v_i[-1]]
                 P_i = [P_i[-1]]
-        
-            date_item = abs(2 * buy_volume - volume_bucket_size)
-            VPIN.append(date_item / total_volume)
 
         plt.title('Buy & Sell Volumes using BVC')
         plt.xlabel('Volume Bucket')
         plt.ylabel('Volume')
-        plt.plot(np.arange(len(total_volume)), buy_volume_buckets, label='Buy Volume')
-        plt.plot(np.arange(len(total_volume)), sell_volume_buckets, label='Sell Volume')
+        plt.scatter(np.arange(len(total_volume)), buy_volume_buckets, label='Buy Volume')
+        plt.scatter(np.arange(len(total_volume)), sell_volume_buckets, label='Sell Volume', color='black')
         plt.legend()
         plt.show()
-        return buy_volume_buckets, sell_volume_buckets, VPIN
+        return buy_volume_buckets, sell_volume_buckets
+
+    def VPIN(self, buy_buckets, sell_buckets):
+        """
+        :param buy_buckets: estimated classified buys from BVC
+        :param sell_buckets:"" sells ""
+        :return: VPIN metric - volume-synchronized prob of informed trade
+        """
+        cumulative_oi = sum([abs(buy_buckets[i] - sell_buckets[i]) for i in range(len(buy_buckets))])
+        VPIN = cumulative_oi / (self.n * self.tick_data['Volume'].sum())
+        return VPIN
 
 if __name__=="__main__":
     dePrado2014()
