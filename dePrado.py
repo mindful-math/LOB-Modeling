@@ -198,7 +198,7 @@ class dePrado2014:
     def bulk_volume_classification(self, n):
         """
         :param n: n is the number of volume buckets you want
-        :return: volume buckets of LOB data ready for VPIN/etc
+        :return: volume buckets of LOB data and VPIN
         """
         total_volume = self.tick_data['Volume'].sum()
         volume_bucket_size = total_volume / n
@@ -209,6 +209,7 @@ class dePrado2014:
         total_volume = []
         v_i = []
         P_i = []
+        VPIN = []
         for tick in self.tick_data.itertuples():
             if sum(v_i) + tick[3] < volume_bucket_size:
                 v_i.append(tick[3])
@@ -216,23 +217,26 @@ class dePrado2014:
                 continue
 
             else:
-                if len(v_i) == 1:
-                    buy_volume_buckets.append(v_i[0] / 2)
-                    sell_volume_buckets.append(v_i[0] / 2)
-                    total_volume.append(v_i)
-                    v_i = []
-                    P_i = []
-                else:
-                    price_change = abs(max(P_i[0:-1]) - min(P_i[0:-1]))
-                    buy_volume = sum(v_i[0:-1]) * stats.norm.cdf(price_change / price_deviation)
-                    sell_volume = sum(v_i[0:-1]) - buy_volume
-                    total_volume.append(sum(v_i[0:-1]))
-                    buy_volume_buckets.append(buy_volume)
-                    sell_volume_buckets.append(sell_volume)
-                    v_i = [v_i[-1]]
-                    P_i = [P_i[-1]]
+                price_change = abs(max(P_i) - min(P_i))
+                buy_volume = sum(v_i[0:-1]) * stats.norm.cdf(price_change / price_deviation)
+                sell_volume = sum(v_i[0:-1]) - buy_volume
+                total_volume.append(sum(v_i[0:-1]))
+                buy_volume_buckets.append(buy_volume)
+                sell_volume_buckets.append(sell_volume)
+                v_i = [v_i[-1]]
+                P_i = [P_i[-1]]
+        
+            date_item = abs(2 * buy_volume - volume_bucket_size)
+            VPIN.append(date_item / total_volume)
 
-        return buy_volume_buckets, sell_volume_buckets
+        plt.title('Buy & Sell Volumes using BVC')
+        plt.xlabel('Volume Bucket')
+        plt.ylabel('Volume')
+        plt.plot(np.arange(len(total_volume)), buy_volume_buckets, label='Buy Volume')
+        plt.plot(np.arange(len(total_volume)), sell_volume_buckets, label='Sell Volume')
+        plt.legend()
+        plt.show()
+        return buy_volume_buckets, sell_volume_buckets, VPIN
 
 if __name__=="__main__":
     dePrado2014()
