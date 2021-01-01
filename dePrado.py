@@ -245,8 +245,16 @@ class dePrado2014:
         :param sell_buckets:"" sells ""
         :return: VPIN metric - volume-synchronized prob of informed trade
         """
-        cumulative_oi = sum([abs(buy_buckets[i] - sell_buckets[i]) for i in range(len(buy_buckets))])
-        VPIN = cumulative_oi / (self.n * self.tick_data['Volume'].sum())
+        oi = [abs(buy_buckets[i] - sell_buckets[i]) for i in range(len(buy_buckets))]
+        cumulative_oi = np.array(np.cumsum(oi))
+        cumulative_volume = np.cumsum([buy_buckets[i] + sell_buckets[i] for i in range(len(buy_buckets))])
+        weighted_vol = np.array([i * cumulative_volume[i] for i in range(len(cumulative_volume))])
+        VPIN = cumulative_oi[1:] / weighted_vol[1:]
+        plt.plot(np.arange(len(VPIN)), VPIN, color='red')
+        plt.xlabel('Volume Bucket')
+        plt.ylabel('VPIN')
+        plt.title('Evolution of VPIN over Day')
+        plt.show()
         return VPIN
 
 if __name__=="__main__":
