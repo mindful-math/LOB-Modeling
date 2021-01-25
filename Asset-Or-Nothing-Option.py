@@ -4,7 +4,7 @@ from math import e
 def asset_or_nothing_call(s, n, k, T, K, F, SIGMA, r):
     """
     :param s: initial price
-    :param n: partition expiry into n branches (n>=0 for good estimate)
+    :param n: partition expiry into n branches (n>>0 for good estimate)
     :param z: size of partitions
     :param T: time to expiry (years)
     :param K: strike price
@@ -27,6 +27,5 @@ def asset_or_nothing_call(s, n, k, T, K, F, SIGMA, r):
                 asset_option[downfactors, moves] = (BETA * ((p * asset_option[downfactors, moves + 1]) + ((1 - p) * asset_option[downfactors + 1, moves + 1])))
             else:
                 asset_option[downfactors, moves] = F
-    print(asset_option)
     return asset_option
 
