@@ -75,11 +75,9 @@ class KyleModel:
         SIGMA[self.N] = self.SIGMA_G
         LAMBDA[self.N] = math.sqrt(SIGMA[self.N]) / (self.SIGMA * math.sqrt(2 * dT))
         price_changes[self.N] = LAMBDA[self.N] * noise_orders[self.N]
-        '''
         plt.ion()
         fig = plt.figure()
         plt.axis([0, 1000, 0, 1])
-        '''
         iter = 0
 
         while (abs(SIGMA[0] - self.SIGMA_T) > self.ERR) and (iter < self.MAX_ITER):
@@ -100,7 +98,7 @@ class KyleModel:
 
                 DELTA[n-1] = 1 / (4 * LAMBDA[n] * (1 - (BETA[n] * LAMBDA[n])))
 
-            # plot convergence of the sigma
+            # plot convergence of the sigma (only plot one of the graphs each run - hence commented out)
             '''
             plt.scatter(iter, SIGMA[1] - self.SIGMA_T)
             plt.title('Convergence of Intial Volatility of V (SIGMA[0])')
@@ -129,5 +127,6 @@ class KyleModel:
         plt.legend()
         plt.show()
 
+        
 if __name__ == "__main__":
     test = KyleModel()
